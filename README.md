@@ -1,50 +1,42 @@
-# CloudMiner
-Execute code within Azure Automation service without getting charged
+# 云矿机
+在 Azure 自动化服务中执行代码而无需付费
 
-## Description
-CloudMiner is a tool designed to get free computing power within Azure Automation service. The tool utilizes the upload module/package flow to execute code which is totally free to use. This tool is intended for educational and research purposes only and should be used responsibly and with proper authorization.
+## 描述
+CloudMiner 是一款旨在在 Azure 自动化服务中获取免费计算能力的工具。该工具利用上传模块/包流程来执行完全免费使用的代码。该工具仅用于教育和研究目的，应负责任地使用并获得适当的授权。
 
-* This flow was reported to Microsoft on 3/23 which decided to not change the service behavior as it's considered as "by design". As for 3/9/23, this tool can still be used without getting charged.
+* 此流程已于 3 月 23 日向 Microsoft 报告，微软决定不更改服务行为，因为它被认为是“设计使然”。截至23年3月9日，该工具仍然可以免费使用。
 
-* Each execution is limited to 3 hours
+* 每次执行时间限制为3小时
 
-## Requirements
-1. Python 3.8+ with the libraries mentioned in the file `requirements.txt`
-2. Configured Azure CLI - https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
-    - Account must be logged in before using this tool
+## 要求
+1. Python 3.8+ 以及文件中提到的库 `requirements.txt`
+2. 配置的 Azure CLI - https://learn.microsoft.com/en-us/cli/azure/install-azure-cli
+    - 使用此工具之前必须先登录帐户
 
-## Installation
+## 安装
 ```pip install .```
 
-## Usage
+## 用法
 ```
-usage: cloud_miner.py [-h] --path PATH --id ID -c COUNT [-t TOKEN] [-r REQUIREMENTS] [-v]
+用法: cloud_miner.py [-h] --path PATH --id ID -c COUNT [-t TOKEN] [-r REQUIREMENTS] [-v]
 
-CloudMiner - Free computing power in Azure Automation Service
+CloudMiner - Azure 自动化服务中的免费计算资源
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --path PATH           the script path (Powershell or Python)
-  --id ID               id of the Automation Account - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/a
-                        utomationAccounts/{automationAccountName}
-  -c COUNT, --count COUNT
-                        number of executions
-  -t TOKEN, --token TOKEN
-                        Azure access token (optional). If not provided, token will be retrieved using the Azure CLI
-  -r REQUIREMENTS, --requirements REQUIREMENTS
-                        Path to requirements file to be installed and use by the script (relevant to Python scripts only)
-  -v, --verbose         Enable verbose mode
+可选参数:
+-h, --help            显示帮助信息并退出
+--path 路径           脚本路径（Powershell 或 Python）
+--id ID               自动化帐户的 ID - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}
+-c COUNT, --count COUNT
+                      执行次数
+-t TOKEN, --token TOKEN
+                      Azure 访问令牌（可选）。如果不提供，将使用 Azure CLI 获取访问令牌
+-r REQUIREMENTS, --requirements REQUIREMENTS
+                      要安装并由脚本使用的要求文件的路径（仅适用于 Python 脚本）
+-v, --verbose         启用详细模式
 ```
 
-## Example usage
+## 用法示例
 ### Python
 ![Alt text](images/cloud-miner-usage-python.png?raw=true "Usage Example")
 ### Powershell
 ![Alt text](images/cloud-miner-usage-powershell.png?raw=true "Usage Example")
-
-## License
-CloudMiner is released under the BSD 3-Clause License.
-Feel free to modify and distribute this tool responsibly, while adhering to the license terms.
-
-## Author - Ariel Gamrian
-* LinkedIn - [Ariel Gamrian](https://www.linkedin.com/in/ariel-gamrian/)
