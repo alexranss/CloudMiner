@@ -39,34 +39,34 @@ class AzureAutomationSession:
     """
     def __init__(self, account_id: str, access_token: str) -> None:
         """
-        Initiate an Azure Automation session
-        Validates that the Automation Account exists and the access token is valid
+        初始化 Azure Automation 会话
+        验证 Automation Account 是否存在，验证访问令牌是否有效
 
         :param account_id: Automation account ID - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}
-        :param access_token: Azure access token
+        :param access_token: Azure 访问令牌
 
-        :raises CloudMinerException: If access token proivided is not valid
-                                     If Automation Account ID is not valid
-                                     If Automation Account provided does not exist
+        :raises CloudMinerException: 如果提供的访问令牌无效
+                                     如果 Automation Account ID 无效
+                                     如果提供的 Automation Account 不存在
         """
         self.__account_id = account_id
         self.__access_token = access_token
         self.__next_request_time = 0
         try:
             self.__http_request("GET", self.__get_url())
-            logger.info("Access token is valid")
+            logger.info("访问令牌有效")
         except requests.HTTPError as e:
             if e.response.status_code == HTTPStatus.UNAUTHORIZED:
-                raise CloudMinerException("Access token provided is not valid") from e
+                raise CloudMinerException("提供的访问令牌无效") from e
             if e.response.status_code == HTTPStatus.BAD_REQUEST:
-                raise CloudMinerException(f"Automation Account ID provided is not valid - '{account_id}'") from e
+                raise CloudMinerException(f"提供的 Automation Account ID 无效 - '{account_id}'") from e
             if e.response.status_code == HTTPStatus.NOT_FOUND:
-                raise CloudMinerException(f"Automation Account does not exists - '{account_id}'") from e
+                raise CloudMinerException(f"Automation Account 不存在 - '{account_id}'") from e
             raise
 
     def __get_url(self, path: str = "") -> str:
         """
-        Construct a url for the given path in the Automation Account
+        构造 Automation Account 中给定路径的 URL
         """
         return posixpath.join(AZURE_MANAGEMENT_URL,
                               self.__account_id[1:],
@@ -74,7 +74,7 @@ class AzureAutomationSession:
 
     def __wait_for_next_request(self):
         """
-        Helper function to make sure we wait before each request
+        辅助函数，确保在每个请求之前等待一段时间
         """
         current_time = time.time()
         time_gap = self.__next_request_time - current_time
@@ -92,16 +92,16 @@ class AzureAutomationSession:
                      timeout: int = HTTP_REQUEST_TIMEOUT,
                      **kwargs) -> requests.Response:
         """
-        Safe HTTP request to Azure services
+        安全地向 Azure 服务发出 HTTP 请求
 
-        :param http_method:   HTTP method of the request
-        :param url:           URL of the request
-        :param headers:       Headers of the request
-        :param authorization: If True, set the 'Authorization' header
-        :param retries:       Retries count on a bad server response
-        :return:              Response object
+        :param http_method:   请求的 HTTP 方法
+        :param url:           请求的 URL
+        :param headers:       请求的头部信息
+        :param authorization: 如果为 True，则设置 'Authorization' 头部信息
+        :param retries:       在服务器响应错误时的重试次数
+        :return:              响应对象
 
-        :raises HTTPError: If bad response is received
+        :raises HTTPError: 如果收到错误响应
         """
         self.__wait_for_next_request()
 
@@ -115,32 +115,32 @@ class AzureAutomationSession:
             resp = None
             try:
                 resp = requests.request(http_method, url, headers=headers, timeout=timeout, **kwargs)
-            except (ReadTimeout, ChunkedEncodingError, ConnectionError): # Bad response from server
+            except (ReadTimeout, ChunkedEncodingError, ConnectionError): # 从服务器收到错误响应
                 pass
             
             if resp is None or resp.status_code in [HTTPStatus.TOO_MANY_REQUESTS,
                                                     HTTPStatus.GATEWAY_TIMEOUT,
                                                     HTTPStatus.SERVICE_UNAVAILABLE]:
                 
-                logger.warning(f"Too many requests. Retrying in {SLEEP_BETWEEN_ERROR_SECONDS} seconds...")
+                logger.warning(f"请求过多。{SLEEP_BETWEEN_ERROR_SECONDS} 秒后重试...")
                 time.sleep(SLEEP_BETWEEN_ERROR_SECONDS)
             else:
                 resp.raise_for_status()
                 return resp
         else:
-            raise CloudMinerException(f"Failed to send HTTP request - Reached maximum retries. "\
-                                      f"Method - '{http_method}', url - '{url}'")
+            raise CloudMinerException(f"发送 HTTP 请求失败 - 达到最大重试次数。"\
+                                      f"方法 - '{http_method}', URL - '{url}'")
 
     def __upload_file_to_temp_storage(self, file_path: str) -> str:
         """
-        Create a temp storage and upload a file
+        创建临时存储并上传文件
 
-        :param file_path: File path to upload
-        :return: Temp storage url
+        :param file_path: 要上传的文件路径
+        :return: 临时存储的 URL
         """
         url = URL_GET_STORAGE_BLOB.format(account_id=self.__account_id)
         self.__current_temp_storage_url = self.__http_request("GET", url).json()
-        logger.debug("Temporary blob storage created successfully")
+        logger.debug("成功创建临时 blob 存储")
 
         with open(file_path, "rb") as f:
             file_data = f.read()
@@ -152,14 +152,14 @@ class AzureAutomationSession:
                             data=file_data)
         
         file_name = os.path.basename(file_path)
-        logger.debug(f"File '{file_name}' uploaded to temporary storage")
+        logger.debug(f"文件 '{file_name}' 已上传到临时存储")
         return self.__current_temp_storage_url
 
     def upload_powershell_module(self, module_name: str, zipped_ps_module: str):
         """
-        Upload a Powershell module to the Automation Account
+        将 Powershell 模块上传到 Automation Account
         """
-        logger.info(f"Uploading Powershell module '{module_name}'")
+        logger.info(f"正在上传 Powershell 模块 '{module_name}'")
         
         temp_storage_url = self.__upload_file_to_temp_storage(zipped_ps_module)
         url = self.__get_url(f"modules/{module_name}")
@@ -174,9 +174,9 @@ class AzureAutomationSession:
 
     def upload_python_package(self, package_name: str, whl_path: str):
         """
-        Upload a Python package from a given blob storage
+        从给定的 blob 存储中上传 Python 包
         """
-        logger.info(f"Uploading Python package - '{package_name}':")
+        logger.info(f"正在上传 Python 包 - '{package_name}':")
         
         temp_storage_url = self.__upload_file_to_temp_storage(whl_path)
         url = self.__get_url(f"python3Packages/{package_name}")
@@ -188,11 +188,11 @@ class AzureAutomationSession:
             }
         }
         self.__http_request("PUT", url, json=request_data)
-        logger.info(f"Triggered package import flow in Automation Account.")
+        logger.info(f"在 Automation Account 中触发包导入流程。")
 
     def get_python_package(self, package_name: str) -> dict:
         """
-        Retrieve a Python package. Return None if does not exist
+        检索 Python 包。如果不存在则返回 None
         """
         url = self.__get_url(f"python3Packages/{package_name}")
         try:
@@ -207,15 +207,15 @@ class AzureAutomationSession:
     
     def delete_python_package(self, package_name: str):
         """
-        Delete a Python package
+        删除 Python 包
         
-        :raises CloudMinerException: If the given package does not exists
+        :raises CloudMinerException: 如果给定的包不存在
         """
         url = self.__get_url(f"python3Packages/{package_name}")
         try:
             self.__http_request("DELETE", url)
         except requests.HTTPError as e:
             if e.response.status_code == HTTPStatus.NOT_FOUND:
-                raise CloudMinerException(f"Failed to delete package {package_name}. Package does not exist")
+                raise CloudMinerException(f"无法删除包 {package_name}。包不存在")
             else:
                 raise
