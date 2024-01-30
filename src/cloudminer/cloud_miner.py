@@ -12,40 +12,40 @@ from scripts_executor import PowershellScriptExecutor, PythonScriptExecutor
 
 def get_access_token_from_cli() -> str:
     """
-    Retrieve Azure access token using Azure CLI
+    使用 Azure CLI 获取 Azure 访问令牌
 
-    :raises CloudMinerException: If Azure CLI is not installed or not in PATH environment variable
-                                 If account is not logged in via Azure CLI
-                                 If failed to retrieve account access token
+    :raises CloudMinerException: 如果未安装 Azure CLI 或未设置 PATH 环境变量
+                                 如果账户未通过 Azure CLI 登录
+                                 如果无法获取账户访问令牌
     """
-    logger.info("Retrieving access token using Azure CLI...")
+    logger.info("使用 Azure CLI 获取访问令牌...")
     try:
-        # Check if user is logged in
+        # 检查用户是否已登录
         process = utils.run_command(["az", "account", "show"])
         if process.returncode != 0:
-            raise CloudMinerException(f"Account must be logged in via Azure CLI")
+            raise CloudMinerException(f"必须通过 Azure CLI 登录账户")
         
         process = utils.run_command(["az", "account", "get-access-token"])
         if process.returncode != 0:
-            raise CloudMinerException(f"Failed to retrieve access token using Azure CLI. Error: {process.stderr}")
+            raise CloudMinerException(f"使用 Azure CLI 获取访问令牌失败。错误信息：{process.stderr}")
          
     except FileNotFoundError:
-        raise CloudMinerException("Azure CLI is not installed on the system or not in PATH environment variable")
+        raise CloudMinerException("系统中未安装 Azure CLI 或未设置 PATH 环境变量")
 
     return json.loads(process.stdout)["accessToken"]
     
 
 def parse_args() -> argparse.Namespace:
     """
-    Parse command line arguments
+    解析命令行参数
     """
-    parser = argparse.ArgumentParser(description="CloudMiner - Free computing power in Azure Automation Service")
-    parser.add_argument("--path", type=str, help="the script path (Powershell or Python)", required=True)
-    parser.add_argument("--id", type=str, help="id of the Automation Account - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}", required=True)
-    parser.add_argument("-c","--count", type=int, help="number of executions", required=True)
-    parser.add_argument("-t","--token", type=str, help="Azure access token (optional). If not provided, token will be retrieved using the Azure CLI")
-    parser.add_argument("-r","--requirements", type=str, help="Path to requirements file to be installed and use by the script (relevant to Python scripts only)")
-    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose mode')
+    parser = argparse.ArgumentParser(description="CloudMiner - Azure 自动化服务中的免费计算资源")
+    parser.add_argument("--path", type=str, help="脚本路径（Powershell 或 Python）", required=True)
+    parser.add_argument("--id", type=str, help="自动化帐户的 ID - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}", required=True)
+    parser.add_argument("-c","--count", type=int, help="执行次数", required=True)
+    parser.add_argument("-t","--token", type=str, help="Azure 访问令牌（可选）。如果不提供，将使用 Azure CLI 获取访问令牌")
+    parser.add_argument("-r","--requirements", type=str, help="要安装并由脚本使用的要求文件的路径（仅适用于 Python 脚本）")
+    parser.add_argument('-v', '--verbose', action='store_true', help='启用详细模式')
     return parser.parse_args()
 
 
@@ -56,30 +56,30 @@ def main():
     logger.info(utils.PROJECT_BANNER)
     
     if not os.path.exists(args.path):
-        raise CloudMinerException(f"Script path '{args.path}' does not exist!")
+        raise CloudMinerException(f"脚本路径 '{args.path}' 不存在！")
     
     if args.requirements and not os.path.exists(args.requirements):
-        raise CloudMinerException(f"Requirements path '{args.requirements}' does not exist!")
+        raise CloudMinerException(f"要求文件路径 '{args.requirements}' 不存在！")
     
     access_token = args.token or get_access_token_from_cli()
     automation_session = AzureAutomationSession(args.id, access_token)
 
     file_extension = utils.get_file_extension(args.path).lower()
     if file_extension == PowershellScriptExecutor.EXTENSION:
-        logger.info(f"File type detected - Powershell")
+        logger.info(f"检测到文件类型 - Powershell")
         executor = PowershellScriptExecutor(automation_session, args.path)
 
     elif file_extension == PythonScriptExecutor.EXTENSION:
-        logger.info(f"File type detected - Python")
+        logger.info(f"检测到文件类型 - Python")
         executor = PythonScriptExecutor(automation_session, args.path, args.requirements)
 
     else:
-        raise CloudMinerException(f"File extension {file_extension} is not supported")
+        raise CloudMinerException(f"不支持的文件扩展名：{file_extension}")
 
     
     executor.execute_script(args.count)
     
-    logger.info("CloudMiner finished successfully :)")
+    logger.info("CloudMiner 成功完成 :)")
 
 if __name__ == "__main__":
     main()
