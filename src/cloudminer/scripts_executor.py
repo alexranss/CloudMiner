@@ -17,8 +17,8 @@ class ScriptExecutor(ABC):
 
     def __init__(self, automation_session: AzureAutomationSession, script_path: str) -> None:
         """
-        :param automation_session: Automation account session to use
-        :param script_path: Script to execute within Automation Account
+        :param automation_session: 使用的自动化帐户会话
+        :param script_path: 在自动化帐户中执行的脚本
         """
         super().__init__()
         self.automation_session = automation_session
@@ -27,9 +27,9 @@ class ScriptExecutor(ABC):
     @abstractmethod
     def execute_script(self, count: int):
         """
-        Executes a script within Azure Automation
+        在 Azure 自动化中执行脚本
 
-        :param count: Number of executions
+        :param count: 执行次数
         """
         pass
 
@@ -40,23 +40,23 @@ class PowershellScriptExecutor(ScriptExecutor):
 
     def execute_script(self, count: int):
         """
-        Executes Powershell module within Azure Automation
+        在 Azure 自动化中执行 Powershell 模块
 
-        :param count: Number of executions
+        :param count: 执行次数
         """
         for index in range(count):
-            logger.info(f"Triggering Powershell execution - {index+1}/{count}:")
+            logger.info(f"触发 Powershell 执行 - {index+1}/{count}:")
             logger.add_indent()
             module_name = str(uuid.uuid4())
             zipped_ps_module = utils.zip_file(self.script_path, f"{module_name}.psm1")
             self.automation_session.upload_powershell_module(module_name, zipped_ps_module)
-            logger.info(f"Triggered module import flow in Automation Account. Code execution will be triggered in a few minutes...")
+            logger.info(f"在自动化帐户中触发模块导入流程。代码执行将在几分钟后触发...")
             logger.remove_indent()
 
 
 class PythonScriptExecutor(ScriptExecutor):
     """
-    ScriptExecutor class to execute Python scripts
+    执行 Python 脚本的 ScriptExecutor 类
     """
     EXTENSION = ".py"
     PIP_PACKAGE_NAME = "pip"
@@ -66,45 +66,45 @@ class PythonScriptExecutor(ScriptExecutor):
     
     def __init__(self, automation_session: AzureAutomationSession, script_path: str, requirements_file: str = None) -> None:
         """
-        :param automation_session: Automation account session to use
-        :param script_path: Script to execute within Automation Account
-        :param requirements_path: Path to requirements file to be installed and use by the script
+        :param automation_session: 使用的自动化帐户会话
+        :param script_path: 在自动化帐户中执行的脚本
+        :param requirements_path: 要安装和使用脚本的要求文件的路径
         """
         super().__init__(automation_session, script_path)
         self.requirements_file = requirements_file
 
     def _delete_pip_if_exists(self):
         """
-        Validate 'pip' package does not exist
+        验证 'pip' 包是否存在
 
-        :param delete_if_exists: If True and package exists, deletes the package
+        :param delete_if_exists: 如果为 True 并且包存在，则删除该包
 
-        :raises CloudMinerException: If package exists and 'delete_if_exists' is False
+        :raises CloudMinerException: 如果包存在且 'delete_if_exists' 为 False
         """
         pip_package = self.automation_session.get_python_package(PythonScriptExecutor.PIP_PACKAGE_NAME)
         if pip_package:
-            logger.warning(f"Package '{PythonScriptExecutor.PIP_PACKAGE_NAME}' already exists in Automation Account. Deleting package")
+            logger.warning(f"在自动化帐户中已存在包 '{PythonScriptExecutor.PIP_PACKAGE_NAME}'。正在删除包")
             self.automation_session.delete_python_package(PythonScriptExecutor.PIP_PACKAGE_NAME)
 
     def _wait_for_package_upload(self, package_name: str, timeout_seconds: int = UPLOAD_TIMEOUT):
         """
-        Wait until the package upload flow is finished or until timeout (Blocking)
+        等待直到软件包上传流程完成或超时（阻塞）
 
-        :param package_name: Python package name to wait for
-        :param timeout_seconds: Maximum time to wait for the upload
+        :param package_name: 要等待的 Python 包名称
+        :param timeout_seconds: 等待上传的最大时间
 
-        :raises CloudMinerException: If the upload flow has not started for the given package
-                                     If upload flow has finished with an error
-                                     If timeout is reached
+        :raises CloudMinerException: 如果给定包的上传流程尚未开始
+                                     如果上传流程已完成但出现错误
+                                     如果达到了超时时间
         """
-        logger.info(f"Waiting for package to finish upload. This might take a few minutes...")
+        logger.info(f"等待软件包完成上传。这可能需要几分钟...")
         logger.add_indent()
         start_time = time.time()
         end_time = start_time + timeout_seconds
         while time.time() < end_time:
             package_data = self.automation_session.get_python_package(package_name)
             if not package_data:
-                raise CloudMinerException(f"Upload flow for package '{package_name}' has failed to be started")
+                raise CloudMinerException(f"软件包 '{package_name}' 的上传流程启动失败")
             
             upload_state = package_data["properties"]["provisioningState"]         
             if upload_state == UPLOAD_STATE.SUCCEEDED:
@@ -112,16 +112,16 @@ class PythonScriptExecutor(ScriptExecutor):
                 break
             elif upload_state == UPLOAD_STATE.FAILED:
                 error = package_data["properties"]["error"]["message"]
-                raise CloudMinerException("Python package upload failed. Error: ", error)
+                raise CloudMinerException("Python 软件包上传失败。错误：", error)
             else:
-                logger.debug(f"Upload state - '{upload_state}'")
+                logger.debug(f"上传状态 - '{upload_state}'")
                 time.sleep(PythonScriptExecutor.UPLOAD_STATE_CHECK_INTERVAL_SECONDS)
         else:
-            raise CloudMinerException("Python package upload failed due to timeout")
+            raise CloudMinerException("由于超时，Python 软件包上传失败")
         
     def _wrap_script(self) -> List[str]:
         """
-        Construct lines of code for installing Python packages
+        构造安装 Python 包的代码行
         """
         INSTALL_REQUIREMENTS_CODE = []
         if self.requirements_file:
@@ -134,7 +134,7 @@ class PythonScriptExecutor(ScriptExecutor):
                                             "open(os.path.join(tmp_folder, 'tmp_pip.py'), 'wb+').write(tmp_pip)",
                                             f"subprocess.run(f'{{sys.executable}} {{os.path.join(tmp_folder, \"tmp_pip.py\")}} {' '.join(requirements)} --target {{tmp_folder}}', shell=True)"]
             
-        return '\n'.join(["# Auto added by CloudMiner",
+        return '\n'.join(["# CloudMiner 自动添加",
                           "######################################################################################"] +
                           INSTALL_REQUIREMENTS_CODE +
                           ["def _main():\n\tpass",
@@ -143,14 +143,14 @@ class PythonScriptExecutor(ScriptExecutor):
 
     def _create_whl_for_upload(self) -> str:
         """
-        Creates a Python package whl using the given Python script
+        使用给定的 Python 脚本创建 Python 包 whl
 
-        :raises CloudMinerException: If failed to create .whl file
+        :raises CloudMinerException: 如果无法创建 .whl 文件
         """
         main_file_path = os.path.join(PythonScriptExecutor.CUSTOM_PIP_PATH, "src", PythonScriptExecutor.PIP_PACKAGE_NAME, "main.py")
         shutil.copyfile(self.script_path, main_file_path)
 
-        #Add a main function to the file to be used as the entry point
+        # 为文件添加一个主函数，作为入口点
         with open(main_file_path, 'r') as f:
             raw_main_file = f.read()
         
@@ -163,24 +163,24 @@ class PythonScriptExecutor(ScriptExecutor):
 
     def execute_script(self, count: int):
         """
-        Executes Python script within Azure Automation
+        在 Azure 自动化中执行 Python 脚本
 
-        :param script_path: .whl file path. Get using 'prepare_file_for_upload'
-        :param count: Number of executions
+        :param script_path: .whl 文件路径。使用 'prepare_file_for_upload' 获取
+        :param count: 执行次数
         """
         self._delete_pip_if_exists()
         whl_path = self._create_whl_for_upload()
-        logger.info(f"Replacing the default 'pip' package present in the Automation account:")
+        logger.info(f"替换自动化帐户中默认的 'pip' 包:")
         logger.add_indent()
         self.automation_session.upload_python_package(PythonScriptExecutor.PIP_PACKAGE_NAME, whl_path)
         self._wait_for_package_upload(PythonScriptExecutor.PIP_PACKAGE_NAME)
         logger.remove_indent()
 
-        logger.info("Successfully replaced the pip package!")
+        logger.info("成功替换 pip 包！")
         for index in range(count):
-            logger.info(f"Triggering Python execution - {index+1}/{count}:")
+            logger.info(f"触发 Python 执行 - {index+1}/{count}:")
             logger.add_indent()
             package_name = str(uuid.uuid4())
             self.automation_session.upload_python_package(package_name, PythonScriptExecutor.DUMMY_WHL_PATH)
-            logger.info(f"Code execution will be triggered in a few minutes...")
+            logger.info(f"代码执行将在几分钟后触发...")
             logger.remove_indent()
